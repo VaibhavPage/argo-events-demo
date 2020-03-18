@@ -58,9 +58,18 @@ spec:
                       image: metalgearsolid/demo-blur-argo-logo:latest
                       command: [papermill]
                       imagePullPolicy: Always
+                      env:
+                        - name: AWS_ACCESS_KEY_ID
+                          value: minio
+                        - name: AWS_SECRET_ACCESS_KEY
+                          value: minio123
+                        - name: AWS_DEFAULT_REGION
+                          value: us-east-1
+                        - name: BOTO3_ENDPOINT_URL
+                          value: http://localhost:9000
                       args:
                         - "noise.ipynb"
-                        - "out/img-out.ipynb"
+                        - "s3://output/noisy-out.ipynb"
                         - "-p"
                         - "filterA"
                         - "{{inputs.parameters.filterA}}"

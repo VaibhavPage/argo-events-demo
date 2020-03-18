@@ -1,6 +1,6 @@
 FROM python:3
 
-RUN pip install --upgrade pip && pip install --no-cache-dir papermill scikit-image numpy matplotlib opencv-python jupyter minio
+RUN pip install --upgrade pip && pip install --no-cache-dir papermill scikit-image numpy matplotlib opencv-python jupyter minio boto3
 
 COPY noise.ipynb noise.ipynb
 
