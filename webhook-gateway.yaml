@@ -1,71 +1,41 @@
 apiVersion: argoproj.io/v1alpha1
-kind: Sensor
+kind: Gateway
 metadata:
-  name: webhook-sensor
+  name: webhook-gateway
   labels:
-    sensors.argoproj.io/sensor-controller-instanceid: argo-events
+    # gateway controller with instanceId "argo-events" will process this gateway
+    gateways.argoproj.io/gateway-controller-instanceid: argo-events
 spec:
+  replica: 1
+  type: webhook
+  eventSourceRef:
+    name: webhook-event-source
   template:
+    metadata:
+      name: webhook-gateway
+      labels:
+        gateway-name: webhook-gateway
     spec:
       containers:
-        - name: sensor
-          image: argoproj/sensor:v0.13.0-rc
+        - name: gateway-client
+          image: argoproj/gateway-client:v0.13.0-rc
           imagePullPolicy: Always
+          command: ["/bin/gateway-client"]
+        - name: webhook-events
+          image: argoproj/webhook-gateway:v0.13.0-rc
+          imagePullPolicy: Always
+          command: ["/bin/webhook-gateway"]
       serviceAccountName: argo-events-sa
-  dependencies:
-    - name: test-dep
-      gatewayName: webhook-gateway
-      eventName: example
-  subscription:
+  service:
+    metadata:
+      name: webhook-gateway-svc
+    spec:
+      selector:
+        gateway-name: webhook-gateway
+      ports:
+        - port: 12000
+          targetPort: 12000
+      type: LoadBalancer
+  subscribers:
     http:
-      port: 9300
-  triggers:
-    - template:
-        name: webhook-workflow-trigger
-        k8s:
-          group: argoproj.io
-          version: v1alpha1
-          resource: workflows
-          operation: create
-          source:
-            resource:
-              apiVersion: argoproj.io/v1alpha1
-              kind: Workflow
-              metadata:
-                generateName: webhook-
-              spec:
-                entrypoint: noisy
-                arguments:
-                  parameters:
-                  - name: filter_a
-                    value: 5
-                  - name: filter_b
-                    value: 5
-                  - name: s_vs_p
-                    value: 0.5
-                  - name: amount
-                    value: 0.004
-                templates:
-                - name: noisy
-                  serviceAccountName: argo-events-sa
-                  inputs:
-                    parameters:
-                    - name: message
-                  container:
-                    image: metalgearsolid/demo-blur-argo-logo:latest
-                    command: [papermill]
-                    imagePullPolicy: Always
-                    args: 
-                      - "noise.ipynb"
-                      - "out/img-out.ipynb"
-                      - "-p"
-                      - "filter_a"
-                      - "{{inputs.parameters.filter_a}}"
-                      - "-p"
-                      - "filter_b"
-                      - "{{inputs.parameters.filter_b}}"
-                      - 
-          parameters:
-            - src:
-                dependencyName: test-dep
-              dest: spec.arguments.parameters.0.value
+      - "http://webhook-sensor.argo-events.svc:9300/"
