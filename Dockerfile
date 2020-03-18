@@ -1,0 +1,11 @@
+FROM python:3
+
+RUN pip install --upgrade pip && pip install --no-cache-dir papermill scikit-image numpy matplotlib opencv-python jupyter minio
+
+COPY noise.ipynb noise.ipynb
+
+COPY out out
+
+RUN chmod -R 777 out
+
+# ENTRYPOINT ["papermill", "noise.ipynb", "img-out.ipynb", "-p", "filter_a", "25", "-p", "filter_b", "25"]

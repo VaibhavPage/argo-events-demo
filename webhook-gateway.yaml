@@ -1,0 +1,71 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Sensor
+metadata:
+  name: webhook-sensor
+  labels:
+    sensors.argoproj.io/sensor-controller-instanceid: argo-events
+spec:
+  template:
+    spec:
+      containers:
+        - name: sensor
+          image: argoproj/sensor:v0.13.0-rc
+          imagePullPolicy: Always
+      serviceAccountName: argo-events-sa
+  dependencies:
+    - name: test-dep
+      gatewayName: webhook-gateway
+      eventName: example
+  subscription:
+    http:
+      port: 9300
+  triggers:
+    - template:
+        name: webhook-workflow-trigger
+        k8s:
+          group: argoproj.io
+          version: v1alpha1
+          resource: workflows
+          operation: create
+          source:
+            resource:
+              apiVersion: argoproj.io/v1alpha1
+              kind: Workflow
+              metadata:
+                generateName: webhook-
+              spec:
+                entrypoint: noisy
+                arguments:
+                  parameters:
+                  - name: filter_a
+                    value: 5
+                  - name: filter_b
+                    value: 5
+                  - name: s_vs_p
+                    value: 0.5
+                  - name: amount
+                    value: 0.004
+                templates:
+                - name: noisy
+                  serviceAccountName: argo-events-sa
+                  inputs:
+                    parameters:
+                    - name: message
+                  container:
+                    image: metalgearsolid/demo-blur-argo-logo:latest
+                    command: [papermill]
+                    imagePullPolicy: Always
+                    args: 
+                      - "noise.ipynb"
+                      - "out/img-out.ipynb"
+                      - "-p"
+                      - "filter_a"
+                      - "{{inputs.parameters.filter_a}}"
+                      - "-p"
+                      - "filter_b"
+                      - "{{inputs.parameters.filter_b}}"
+                      - 
+          parameters:
+            - src:
+                dependencyName: test-dep
+              dest: spec.arguments.parameters.0.value

@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  name: noisy-image
+spec:
+  entrypoint: noisy-image
+  arguments:
+  templates:
+    - name: noisy-image
+      serviceAccountName: argo-events-sa
+      container:
+        image: metalgearsolid/demo-blur-argo-logo:latest
+        command: [papermill]
+        imagePullPolicy: Always
+        args:
+          - "noise.ipynb"
+          - "out/img-out.ipynb"
+          - "-p"
+          - "filter_a"
+          - "35"
+          - "-p"
+          - "filter_b"
+          - "35"
