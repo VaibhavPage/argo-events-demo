@@ -1,0 +1,78 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Sensor
+metadata:
+  name: minio-sensor
+  labels:
+    # sensor controller with instanceId "argo-events" will process this sensor
+    sensors.argoproj.io/sensor-controller-instanceid: argo-events
+spec:
+  template:
+    spec:
+      containers:
+        - name: sensor
+          image: argoproj/sensor:v0.13.0-rc
+          imagePullPolicy: Always
+      serviceAccountName: argo-events-sa
+  subscription:
+    http:
+      port: 9300
+  dependencies:
+    - name: matcher-dep
+      gatewayName: minio-gateway
+      eventName: matcher
+    - name: production-dep
+      gatewayName: minio-gateway
+      eventName: production
+  dependencyGroups:
+    - name: group_1
+      dependencies:
+        - matcher-dep
+    - name: group_2
+      dependencies:
+        - production-dep
+  circuit: "group_1 || group_2"
+  triggers:
+    - template:
+        switch:
+          all:
+            - group_1
+        name: matcher-workflow
+        k8s:
+          group: argoproj.io
+          version: v1alpha1
+          resource: workflows
+          operation: create
+          source:
+            resource:
+              apiVersion: argoproj.io/v1alpha1
+              kind: Workflow
+              metadata:
+                generateName: matcher-workflow-
+              spec:
+                entrypoint: matcher
+                templates:
+                  - name: matcher
+                    container:
+                      image: metalgearsolid/demo-matcher-argo-logo:latest
+                      imagePullPolicy: Always
+                      command: [papermill]
+                      args:
+                        - "matcher.ipynb"
+                        - "out1/matcher-out.ipynb"
+                        - "-p"
+                        - "bucketName"
+                        - "noisy-images"
+                        - "-p"
+                        - "imageName"
+                        - "blur-argo-logo.png"
+          # The container args from the workflow are overridden by the s3 notification key
+          parameters:
+            - src:
+                dependencyName: matcher-dep
+                dataKey: notification.0.s3.bucket.name
+              dest: spec.templates.0.container.args.4
+            - src:
+                dependencyName: matcher-dep
+                dataKey: notification.0.s3.object.key
+              dest: spec.templates.0.container.args.7
+
