@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: converter
+  labels:
+    app: converter
+spec:
+  replicas: 1
+  template:
+    metadata:
+      name: converter
+      labels:
+        app: converter
+    spec:
+      serviceAccountName: argo-events-sa
+      containers:
+        - name: converter
+          image: metalgearsolid/notebook-converter:latest
+          imagePullPolicy: Always
+          command:
+            - "./converter"
+          args:
+            - output
+            - noisy-out.ipynb
+  selector:
+    matchLabels:
+      app: converter

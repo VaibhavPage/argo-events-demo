@@ -76,3 +76,79 @@ spec:
                 dataKey: notification.0.s3.object.key
               dest: spec.templates.0.container.args.7
 
+    - template:
+        switch:
+          any:
+            - group_2
+        name: production
+        k8s:
+          group: apps
+          version: v1
+          resource: deployments
+          operation: create
+          source:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                generateName: -production-
+                labels:
+                  app: -production
+              spec:
+                replicas: 1
+                template:
+                  metadata:
+                    generateName: -production-
+                    labels:
+                      app: -production
+                  spec:
+                    serviceAccountName: argo-events-sa
+                    containers:
+                      - name: converter
+                        image: metalgearsolid/notebook-converter:latest
+                        imagePullPolicy: Always
+                        command:
+                          - "./converter"
+                        args:
+                          - output
+                          - noisy-out.ipynb
+                selector:
+                  matchLabels:
+                    app: -production
+
+          # The container args from the workflow are overridden by the s3 notification key
+          parameters:
+            - src:
+                dependencyName: production-dep
+                dataKey: notification.0.s3.object.key
+                operation: prepend
+              dest: metadata.generateName
+            - src:
+                dependencyName: production-dep
+                dataKey: notification.0.s3.object.key
+                operation: prepend
+              dest: metadata.labels.app
+            - src:
+                dependencyName: production-dep
+                dataKey: notification.0.s3.object.key
+                operation: prepend
+              dest: spec.template.metadata.generateName
+            - src:
+                dependencyName: production-dep
+                dataKey: notification.0.s3.object.key
+                operation: prepend
+              dest: spec.template.metadata.labels.app
+            - src:
+                dependencyName: production-dep
+                dataKey: notification.0.s3.bucket.name
+              dest: spec.template.spec.containers.0.args.1            
+            - src:
+                dependencyName: production-dep
+                dataKey: notification.0.s3.object.key
+              dest: spec.template.spec.containers.0.args.2
+            - src:
+                dependencyName: production-dep
+                dataKey: notification.0.s3.object.key
+                operation: prepend
+              dest: spec.selector.matchLabels.app
+
