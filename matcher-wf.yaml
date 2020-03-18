@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  name: matcher-wf
+spec:
+  entrypoint: matcher
+  arguments:
+  templates:
+    - name: matcher
+      serviceAccountName: argo-events-sa
+      container:
+        image: metalgearsolid/demo-matcher-argo-logo:latest
+        command: [papermill]
+        imagePullPolicy: Always
+        args:
+          - "matcher.ipynb"
+          - "out1/matcher-out.ipynb"
+          - "-p"
+          - "bucketName"
+          - "noisy-images"
+          - "-p"
+          - "imageName"
+          - "blur-argo-logo.png"
