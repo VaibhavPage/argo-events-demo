@@ -141,11 +141,11 @@ spec:
             - src:
                 dependencyName: production-dep
                 dataKey: notification.0.s3.bucket.name
-              dest: spec.template.spec.containers.0.args.1            
+              dest: spec.template.spec.containers.0.args.0         
             - src:
                 dependencyName: production-dep
                 dataKey: notification.0.s3.object.key
-              dest: spec.template.spec.containers.0.args.2
+              dest: spec.template.spec.containers.0.args.1
             - src:
                 dependencyName: production-dep
                 dataKey: notification.0.s3.object.key
