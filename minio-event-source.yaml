@@ -31,16 +31,16 @@ spec:
         # Name of the K8s secret that contains the secret key
         name: artifacts-minio
 
-    production:
-      bucket:
-        name: production
-      endpoint: minio-service.argo-events:9000
-      events:
-        - s3:ObjectCreated:Put
-      insecure: true
-      accessKey:
-        key: accesskey
-        name: artifacts-minio
-      secretKey:
-        key: secretkey
-        name: artifacts-minio
+#     production:
+#       bucket:
+#         name: production
+#       endpoint: minio-service.argo-events:9000
+#       events:
+#         - s3:ObjectCreated:Put
+#       insecure: true
+#       accessKey:
+#         key: accesskey
+#         name: artifacts-minio
+#       secretKey:
+#         key: secretkey
+#         name: artifacts-minio
