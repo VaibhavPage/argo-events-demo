@@ -119,7 +119,7 @@ In this demo, we are going to set up an image processing pipeline using 2 notebo
                       apiVersion: argoproj.io/v1alpha1
                       kind: Workflow
                       metadata:
-                        generateName: webhook-
+                        generateName: noisy-processor-
                       spec:
                         entrypoint: noisy
                         arguments:
@@ -195,11 +195,11 @@ In this demo, we are going to set up an image processing pipeline using 2 notebo
 
          mc config host add minio http://localhost:9000 minio minio123
 
-1. Create a bucket on Minio called `noisy-images`.
+1. Create a bucket on Minio called `output`.
 
-        mc mb minio/noisy-images
+        mc mb minio/output
 
-1. Create the Minio event source that makes the gateway listen to file events for `noisy-images` bucket,
+1. Create the Minio event source that makes the gateway listen to file events for `output` bucket,
 
         kubectl -n argo-events apply -f https://raw.githubusercontent.com/VaibhavPage/argo-events-demo/master/minio-event-source.yaml
         
@@ -226,4 +226,32 @@ In this demo, we are going to set up an image processing pipeline using 2 notebo
 
         curl -d '{"filterA":"15", "filterB": "15", "sVSp": "0.003", "amount": "0.010"}' -H "Content-Type: application/json" -X POST http://localhost:12000/example
 
-1. 
+1. List argo workflows to list the `noise-processor-` and `matcher-workflow-` 
+
+        argo list
+
+1. Check the noisy image in bucket `output`.
+
+1. As soon as the `matcher-workflow-` completes, you will see a message on NATS subject
+
+        `[#1] Received on [image-match]: 'FAILURE: 0.4500723255991941'`
+
+1. Lets change the parameters for the curl request to get >80% match,
+
+        curl -d '{"filterA":"5", "filterB": "5", "sVSp": "0.008", "amount": "0.0008"}' -H "Content-Type: application/json" -X POST http://localhost:12000/example
+        
+1. Still only 51% match,
+
+        [#2] Received on [image-match]: 'FAILURE: 0.519408012194793'
+
+1. Lets reduce the amount of noise to 0.0008,
+
+        curl -d '{"filterA":"5", "filterB": "5", "sVSp": "0.008", "amount": "0.0008"}' -H "Content-Type: application/json" -X POST http://localhost:12000/example
+
+1. You will see a success message,
+
+        [#4] Received on [image-match]: 'SUCCESS: 0.9157008012270712'
+
+1. This was a simple image processing pipeline using Argo Events. You can easily set up CI pipelines, Machine Learning pipelines etc,
+   using Argo Events and Argo Workflows.
+ 
