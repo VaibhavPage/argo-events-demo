@@ -61,7 +61,7 @@ In this demo, we are going to set up an image processing pipeline using 2 notebo
 <br/>
 
 <p align="center">
-  <img src="https://github.com/VaibhavPage/argo-events-demo/blob/master/out/argo-events-demo-pipeline.png?raw=true" alt="Argo Demo"/>
+  <img src="https://github.com/VaibhavPage/argo-events-demo/blob/master/argo-events-demo-pipeline.png?raw=true" alt="Argo Demo"/>
 </p>
 
 <br/>
