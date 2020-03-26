@@ -7,16 +7,25 @@ to set up **event-driven** parameterized notebooks.
 
 # Prerequisites
 1. Install [Argo Workflows](https://github.com/argoproj/argo/blob/master/docs/getting-started.md).
-2. Install [Argo Events](https://argoproj.github.io/argo-events/installation/).
-3. Install NATS,
+1. Install [Argo Events](https://argoproj.github.io/argo-events/installation/).
+1. Install NATS,
     
         kubectl -n argo-events apply -f https://raw.githubusercontent.com/VaibhavPage/argo-events-demo/master/nats-deploy.yaml
 
-4. Install Minio,
+1. Port forward to NATS pod,
+
+        kubectl -n argo-events port-forward <nats-pod-name> 4222:4222
+
+1. Install Minio,
 
         kubectl -n argo-events apply -f https://raw.githubusercontent.com/VaibhavPage/argo-events-demo/master/artifact-minio.yaml
 
         kubectl -n argo-events apply -f https://raw.githubusercontent.com/VaibhavPage/argo-events-demo/master/minio-deploy.yaml
+
+1. Port forward to Minio pod,
+
+        kubectl -n argo-events port-forward <minio-pod-name> 9000:9000
+
 
 # Setup
 In this demo, we are going to set up an image processing pipeline using 2 notebooks. Lets consider the ArgoProj icon image
@@ -52,7 +61,7 @@ In this demo, we are going to set up an image processing pipeline using 2 notebo
 <br/>
 
 <p align="center">
-  <img src="https://github.com/VaibhavPage/argo-events-demo/blob/master/argo-events-demo-pipeline.png?raw=true" alt="Argo Demo"/>
+  <img src="https://github.com/VaibhavPage/argo-events-demo/blob/master/out/argo-events-demo-pipeline.png?raw=true" alt="Argo Demo"/>
 </p>
 
 <br/>
@@ -65,6 +74,10 @@ In this demo, we are going to set up an image processing pipeline using 2 notebo
 6. Create webhook gateway,
 
         kubectl -n argo-events apply -f https://raw.githubusercontent.com/VaibhavPage/argo-events-demo/master/webhook-gateway.yaml
+        
+1. Port forward to webhook gateway pod,
+
+        kubectl -n argo-events port-forward <webhook-gateway-pod-name> 12000:12000
         
 7. Create webhook sensor,
 
@@ -174,6 +187,43 @@ In this demo, we are going to set up an image processing pipeline using 2 notebo
                         dataKey: body.amount
                       dest: spec.arguments.parameters.3.value
 
+1. The sensor trigger is an Argo workflow that runs a jupyter notebook with papermill.
+   It takes arguments for Guassian filter and Slat+Pepper noise in addition to S3 configuration.
+   The event data received from HTTP POST request is made to override the arguments to workflow on the fly.
+
+1. Lets configurre Minio client mc,
+
+         mc config host add minio http://localhost:9000 minio minio123
+
+1. Create a bucket on Minio called `noisy-images`.
+
+        mc mb minio/noisy-images
+
+1. Create the Minio event source that makes the gateway listen to file events for `noisy-images` bucket,
+
+        kubectl -n argo-events apply -f https://raw.githubusercontent.com/VaibhavPage/argo-events-demo/master/minio-event-source.yaml
+        
+1. Create Minio gateway
+
+        kubectl -n argo-events apply -f https://raw.githubusercontent.com/VaibhavPage/argo-events-demo/master/minio-gateway.yaml
+
+1. Create Minio sensor,
+
+        kubectl -n argo-events apply -f https://raw.githubusercontent.com/VaibhavPage/argo-events-demo/master/minio-sensor.yaml
+        
+1. The Minio sensor triggers an Argo workflow that determines the similarity index of the image that was put onto `noisy-bucket` on Minio
+   and the original Argo logo. If the match is less than 80%, it publishes failure message on NATS subject called `image-match`        
+
+1. Run a NATS subject subscriber in a separate terminal,
+
+        go get github.com/nats-io/nats.go/
+        
+        cd examples/nats-sub
+        
+        go run main.go -s localhost:4222 image-match
+
+1. Now, its time to send a HTTP request to parameterize the notebook that add noise to original Argo logo and execute the image processing pipeline.
+
+        curl -d '{"filterA":"15", "filterB": "15", "sVSp": "0.003", "amount": "0.010"}' -H "Content-Type: application/json" -X POST http://localhost:12000/example
+
 1. 
-
-
